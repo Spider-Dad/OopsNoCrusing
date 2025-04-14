@@ -93,3 +93,14 @@
 2025-04-14 17:03:09,655 - aiogram.dispatcher.dispatcher - INFO - Start polling.
 2025-04-14 17:07:57,915 - aiogram.dispatcher.dispatcher - INFO - Stop polling...
 2025-04-14 17:07:57,916 - aiogram - WARNING - Goodbye!
+2025-04-14 17:19:00,617 - aiogram - INFO - Bot: OopsNoCursing [@OopsNoCursingBot]
+2025-04-14 17:19:00,939 - aiogram - WARNING - Updates were skipped successfully.
+2025-04-14 17:19:00,940 - __main__ - INFO - Запуск бота и инициализация списка нецензурных слов...
+2025-04-14 17:19:01,039 - root - INFO - Загружено 6340 слов из кеш-файла
+2025-04-14 17:19:01,039 - root - INFO - Загружено 6340 нецензурных слов
+2025-04-14 17:19:01,039 - __main__ - INFO - Бот запущен и готов к работе
+2025-04-14 17:19:01,039 - aiogram.dispatcher.dispatcher - INFO - Start polling.
+2025-04-14 17:19:06,289 - root - INFO - Обнаружено нецензурное слово: бля
+2025-04-14 17:19:06,289 - __main__ - INFO - Обнаружена нецензурная лексика в сообщении: Бля
+2025-04-14 17:19:19,886 - aiogram.dispatcher.dispatcher - INFO - Stop polling...
+2025-04-14 17:19:19,886 - aiogram - WARNING - Goodbye!
