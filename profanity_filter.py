@@ -10,7 +10,7 @@ import aiohttp
 from typing import Set, List, Optional, Dict, Any, Union
 
 # Путь к файлу с кешированным списком нецензурных слов
-CACHE_FILE = "bad_words_cache.json"
+CACHE_FILE = "/data/bad_words_cache.json"
 
 # URL API MediaWiki Викисловаря
 MEDIAWIKI_API_URL = "https://ru.wiktionary.org/w/api.php"
