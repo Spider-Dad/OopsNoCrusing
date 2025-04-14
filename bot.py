@@ -19,6 +19,13 @@ load_dotenv()
 # Получение токена и ID администратора из переменных окружения
 API_TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_ID = os.getenv('ADMIN_ID')
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+# Определение путей в зависимости от окружения
+if ENVIRONMENT.lower() == 'production':
+    DATA_DIR = '/data'
+else:
+    DATA_DIR = 'data'
 
 # Преобразуем ID администратора в число, если он задан
 ADMIN_ID = int(ADMIN_ID) if ADMIN_ID and ADMIN_ID.isdigit() else None
@@ -39,7 +46,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("/data/bot.log", encoding='utf-8'),
+        logging.FileHandler(os.path.join(DATA_DIR, "bot.log"), encoding='utf-8'),
         logging.StreamHandler()
     ]
 )

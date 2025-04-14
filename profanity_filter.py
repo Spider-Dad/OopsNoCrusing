@@ -8,9 +8,20 @@ import logging
 import re
 import aiohttp
 from typing import Set, List, Optional, Dict, Any, Union
+from dotenv import load_dotenv
+
+# Загрузка переменных окружения
+load_dotenv()
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+# Определение директории данных в зависимости от окружения
+if ENVIRONMENT.lower() == 'production':
+    DATA_DIR = '/data'
+else:
+    DATA_DIR = 'data'
 
 # Путь к файлу с кешированным списком нецензурных слов
-CACHE_FILE = "/data/bad_words_cache.json"
+CACHE_FILE = os.path.join(DATA_DIR, "bad_words_cache.json")
 
 # URL API MediaWiki Викисловаря
 MEDIAWIKI_API_URL = "https://ru.wiktionary.org/w/api.php"
