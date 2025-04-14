@@ -149,5 +149,73 @@ async def test_filter(message: types.Message):
     else:
         await message.reply(f"❌ Текст «{test_text}» не содержит нецензурную лексику")
 
+@dp.message_handler(commands=['test_yo'])
+async def test_yo_variations(message: types.Message):
+    """
+    Тестирование фильтра на слова с буквами е/ё
+    """
+    if not message.get_args():
+        await message.reply("Использование: /test_yo [слово с буквой е или ё]")
+        return
+
+    test_word = message.get_args().strip()
+
+    # Импортируем функции из модуля profanity_filter
+    from profanity_filter import generate_yo_variants, contains_profanity
+
+    # Получаем варианты слова с е/ё
+    variants = generate_yo_variants(test_word)
+
+    # Проверяем каждый вариант на нецензурность
+    results = []
+    for variant in variants:
+        is_profane = contains_profanity(variant)
+        status = "✅ нецензурное" if is_profane else "❌ обычное"
+        results.append(f"• {variant} — {status}")
+
+    # Формируем ответное сообщение
+    response = f"Варианты слова '{test_word}' с заменой е/ё:\n\n"
+    response += "\n".join(results)
+
+    await message.reply(response)
+
+@dp.message_handler(commands=['add_word'])
+async def add_bad_word(message: types.Message):
+    """
+    Добавление слова в словарь нецензурной лексики
+    """
+    if message.from_user.id == message.chat.id:  # Только в личном чате
+        args = message.get_args()
+        if not args:
+            await message.reply("Использование: /add_word [слово для добавления]")
+            return
+
+        word = args.strip().lower()
+
+        # Импортируем необходимые функции и переменные
+        from profanity_filter import BAD_WORDS, CACHE_FILE, generate_yo_variants
+        import json
+
+        # Добавляем слово и его вариации
+        new_words = generate_yo_variants(word)
+        words_count_before = len(BAD_WORDS)
+
+        # Обновляем глобальный словарь
+        BAD_WORDS.update(new_words)
+
+        # Сохраняем обновленный словарь в кеш
+        try:
+            with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+                json.dump(list(BAD_WORDS), f, ensure_ascii=False, indent=2)
+
+            added_count = len(BAD_WORDS) - words_count_before
+            await message.reply(f"Слово «{word}» и {added_count-1} его вариаций успешно добавлены в словарь.\n"
+                               f"Всего слов в словаре: {len(BAD_WORDS)}")
+
+        except Exception as e:
+            await message.reply(f"Произошла ошибка при сохранении: {e}")
+    else:
+        await message.reply("Эта команда доступна только в личном чате с ботом.")
+
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)

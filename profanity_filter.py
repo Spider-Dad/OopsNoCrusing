@@ -25,7 +25,10 @@ FALLBACK_BAD_WORDS = {
     "пиздец", "ебаный", "нахуй", "нахер", "похуй", "горит пизда", "дать в еблетку",
     "дать пизды", "дать по ебалу", "дать по пизде мешалкой", "девятый хуй без соли доедать",
     "дневальный! подай станок ебальный!", "до пизды", "а поебаться тебе не завернуть?",
-    "а сто хуёв — большая куча?", "ап-хуй", "архипиздрит", "ахуй", "ахуилард"
+    "а сто хуёв — большая куча?", "ап-хуй", "архипиздрит", "ахуй", "ахуилард",
+    # Добавляем составные слова с корнем "еб/ёб"
+    "свиноеб", "свиноёб", "мудоеб", "мудоёб", "говноеб", "говноёб", "дебилоеб", "дебилоёб",
+    "хуеплет", "хуёплет", "членосос", "хуесос", "хуёсос"
 }
 
 # Словарь для добавления вариаций словоформ, которые может не содержать API
@@ -37,6 +40,53 @@ ADDITIONAL_WORD_FORMS = {
     "бля": ["блять", "бляди", "блядь", "бляха"],
     "залуп": ["залупа", "залупой", "залупиться"]
 }
+
+def normalize_yo(text: str) -> str:
+    """
+    Заменяет букву 'ё' на 'е' для нормализации текста
+
+    Args:
+        text: Исходный текст
+
+    Returns:
+        Текст с замененными 'ё' на 'е'
+    """
+    return text.replace('ё', 'е')
+
+def generate_yo_variants(word: str) -> Set[str]:
+    """
+    Генерирует варианты слова с заменой 'е' на 'ё' во всех возможных сочетаниях
+
+    Args:
+        word: Исходное слово
+
+    Returns:
+        Множество вариантов слова
+    """
+    if 'е' not in word and 'ё' not in word:
+        return {word}
+
+    variants = {word}
+
+    # Если в слове есть 'ё', добавляем вариант с заменой на 'е'
+    if 'ё' in word:
+        variants.add(normalize_yo(word))
+
+    # Если в слове есть 'е', генерируем варианты с заменой на 'ё'
+    if 'е' in word:
+        # Находим все позиции буквы 'е' в слове
+        positions = [i for i, char in enumerate(word) if char == 'е']
+
+        # Генерируем все возможные комбинации замен
+        for i in range(1, 2**len(positions)):
+            new_word = list(word)
+            for j, pos_bit in enumerate(bin(i)[2:].zfill(len(positions))):
+                if pos_bit == '1':
+                    pos = positions[j]
+                    new_word[pos] = 'ё'
+            variants.add(''.join(new_word))
+
+    return variants
 
 async def get_all_words_in_category() -> Set[str]:
     """
@@ -169,12 +219,18 @@ async def process_category_page(session: aiohttp.ClientSession, url: str, words:
             for match in link_pattern.finditer(pages_content):
                 title = match.group(1)
                 if ":" not in title and "Категория:" not in title:  # Пропускаем подкатегории
-                    words.add(title.lower())
+                    # Добавляем оригинальное слово
+                    word = title.lower()
+                    words.add(word)
+
+                    # Добавляем вариации с ё/е
+                    words.update(generate_yo_variants(word))
 
                     # Добавляем вариацию без знаков препинания
-                    clean_word = re.sub(r'[^\w\s]', '', title.lower())
+                    clean_word = re.sub(r'[^\w\s]', '', word)
                     if clean_word:
                         words.add(clean_word)
+                        words.update(generate_yo_variants(clean_word))
 
             logging.info(f"Найдено {len(words)} слов на данный момент")
 
@@ -248,12 +304,17 @@ async def fetch_via_api_method() -> Set[str]:
                         for member in members:
                             title = member.get("title", "").lower()
                             if ":" not in title:
+                                # Добавляем оригинальное слово
                                 bad_words.add(title)
+
+                                # Добавляем вариации с ё/е
+                                bad_words.update(generate_yo_variants(title))
 
                                 # Очищаем слово от знаков препинания
                                 clean_word = re.sub(r'[^\w\s]', '', title)
                                 if clean_word:
                                     bad_words.add(clean_word)
+                                    bad_words.update(generate_yo_variants(clean_word))
 
                         logging.info(f"Через API получено {len(members)} слов")
 
@@ -278,34 +339,54 @@ def generate_word_forms(word: str) -> Set[str]:
     # Добавляем само слово
     forms.add(word)
 
+    # Добавляем варианты с ё/е
+    forms.update(generate_yo_variants(word))
+
     # Проверяем на совпадение с корнями в словаре дополнительных форм
     for root, variants in ADDITIONAL_WORD_FORMS.items():
         if root in word:
             forms.update(variants)
+            # Для каждого варианта добавляем его вариации с ё/е
+            for variant in variants:
+                forms.update(generate_yo_variants(variant))
 
     # Генерируем простые склонения
     if len(word) > 3:
         if word.endswith('ть'):
             # Глагольные формы
             base = word[:-2]
-            forms.update([
+            verb_forms = [
                 f"{base}л", f"{base}ла", f"{base}ло", f"{base}ли",
                 f"{base}ю", f"{base}ет", f"{base}ем", f"{base}ете", f"{base}ут",
                 f"{base}нный", f"{base}нная", f"{base}нное", f"{base}нные"
-            ])
+            ]
+            forms.update(verb_forms)
+            # Для каждой формы добавляем варианты с ё/е
+            for verb_form in verb_forms:
+                forms.update(generate_yo_variants(verb_form))
+
         elif word.endswith('а'):
             # Склонения существительных женского рода
             base = word[:-1]
-            forms.update([
+            noun_forms = [
                 f"{base}у", f"{base}е", f"{base}ой", f"{base}ы"
-            ])
+            ]
+            forms.update(noun_forms)
+            # Для каждой формы добавляем варианты с ё/е
+            for noun_form in noun_forms:
+                forms.update(generate_yo_variants(noun_form))
+
         elif word.endswith('й'):
             # Склонения прилагательных
             base = word[:-1]
-            forms.update([
+            adj_forms = [
                 f"{base}я", f"{base}е", f"{base}ю", f"{base}м",
                 f"{base}его", f"{base}ему"
-            ])
+            ]
+            forms.update(adj_forms)
+            # Для каждой формы добавляем варианты с ё/е
+            for adj_form in adj_forms:
+                forms.update(generate_yo_variants(adj_form))
 
     return forms
 
@@ -334,6 +415,7 @@ async def load_or_update_bad_words() -> Set[str]:
         with open(CACHE_FILE, 'w', encoding='utf-8') as f:
             json.dump(list(bad_words), f, ensure_ascii=False, indent=2)
             logging.info(f"Сохранено {len(bad_words)} слов в кеш-файл")
+        return bad_words
     except Exception as e:
         logging.error(f"Ошибка при сохранении кеш-файла: {e}")
 
@@ -366,28 +448,79 @@ def contains_profanity(text: str) -> bool:
     # Приводим текст к нижнему регистру
     text_lower = text.lower()
 
-    # Разбиваем на слова
-    words = re.findall(r'\b\w+\b', text_lower)
+    # Также подготавливаем вариант текста с нормализованными 'ё' -> 'е'
+    text_normalized = normalize_yo(text_lower)
 
-    # Проверяем каждое слово на вхождение в список нецензурных слов
-    for word in words:
+    # Разбиваем на слова оба варианта текста
+    words = re.findall(r'\b\w+\b', text_lower)
+    words_normalized = re.findall(r'\b\w+\b', text_normalized)
+
+    # Объединяем оба набора слов
+    all_words = set(words + words_normalized)
+
+    # 1. Проверяем каждое слово на вхождение в список нецензурных слов напрямую
+    for word in all_words:
         if word in BAD_WORDS:
             logging.info(f"Обнаружено нецензурное слово: {word}")
             return True
 
-    # Проверяем на вхождение фраз и словосочетаний (для составных выражений)
+    # 2. Проверяем каждое слово с нормализацией ё->е
     for bad_word in BAD_WORDS:
-        if len(bad_word) > 3 and ' ' in bad_word and bad_word in text_lower:
-            logging.info(f"Обнаружено нецензурное выражение: {bad_word}")
-            return True
+        normalized_bad_word = normalize_yo(bad_word)
+        for word in all_words:
+            if word == normalized_bad_word or normalize_yo(word) == bad_word:
+                logging.info(f"Обнаружено нецензурное слово (после нормализации): {word} -> {bad_word}")
+                return True
 
-    # Проверяем вхождение корней слов (для обхода склонений)
+    # 3. Проверяем на вхождение фраз и словосочетаний (для составных выражений)
     for bad_word in BAD_WORDS:
-        if len(bad_word) > 3 and ' ' not in bad_word and bad_word in text_lower:
-            # Проверяем, что это именно корень слова, а не часть другого слова
-            word_pattern = re.compile(f'\\b\\w*{re.escape(bad_word)}\\w*\\b')
-            if word_pattern.search(text_lower):
-                logging.info(f"Обнаружен корень нецензурного слова: {bad_word}")
+        if len(bad_word) > 3 and ' ' in bad_word:
+            # Для фраз проверяем как оригинал, так и нормализованную версию
+            if bad_word in text_lower or bad_word in text_normalized:
+                logging.info(f"Обнаружено нецензурное выражение: {bad_word}")
+                return True
+
+            # Проверяем с нормализацией ё->е
+            normalized_bad_word = normalize_yo(bad_word)
+            if normalized_bad_word in text_lower or normalized_bad_word in text_normalized:
+                logging.info(f"Обнаружено нецензурное выражение (после нормализации): {bad_word}")
+                return True
+
+    # 4. Проверяем вхождение корней слов (для обхода склонений)
+    for bad_word in BAD_WORDS:
+        if len(bad_word) > 3 and ' ' not in bad_word:
+            # Проверяем оригинальную версию плохого слова
+            for check_text in [text_lower, text_normalized]:
+                if bad_word in check_text:
+                    # Проверяем, что это именно корень слова, а не часть другого слова
+                    word_pattern = re.compile(f'\\b\\w*{re.escape(bad_word)}\\w*\\b')
+                    if word_pattern.search(check_text):
+                        logging.info(f"Обнаружен корень нецензурного слова: {bad_word}")
+                        return True
+
+            # Проверяем нормализованную версию плохого слова
+            normalized_bad_word = normalize_yo(bad_word)
+            for check_text in [text_lower, text_normalized]:
+                if normalized_bad_word in check_text:
+                    # Проверяем, что это именно корень слова, а не часть другого слова
+                    word_pattern = re.compile(f'\\b\\w*{re.escape(normalized_bad_word)}\\w*\\b')
+                    if word_pattern.search(check_text):
+                        logging.info(f"Обнаружен корень нецензурного слова (после нормализации): {bad_word}")
+                        return True
+
+    # 5. Прямая проверка слов из текста на основе частей слов
+    for word in all_words:
+        if len(word) >= 4:  # Минимальная длина слова для проверки
+            for bad_root in ["еб", "хуй", "пизд", "залуп", "муд"]:
+                if bad_root in word:
+                    logging.info(f"Обнаружен корень нецензурного слова в слове: {word} (корень: {bad_root})")
+                    return True
+
+    # Специальная проверка для слова свиноеб/свиноёб и подобных составных слов
+    if "свино" in text_lower or "свино" in text_normalized:
+        for suffix in ["еб", "ёб"]:
+            if f"свино{suffix}" in text_lower or f"свино{suffix}" in text_normalized:
+                logging.info(f"Обнаружено составное нецензурное слово: свино{suffix}")
                 return True
 
     return False
