@@ -522,16 +522,10 @@ def contains_profanity(text: str) -> bool:
     # 5. Прямая проверка слов из текста на основе частей слов
     for word in all_words:
         if len(word) >= 4:  # Минимальная длина слова для проверки
-            for bad_root in ["еб", "хуй", "пизд", "залуп", "муд"]:
+            for bad_root in ["хуй", "пизд", "залуп"]:
                 if bad_root in word:
                     logging.info(f"Обнаружен корень нецензурного слова в слове: {word} (корень: {bad_root})")
                     return True
 
-    # Специальная проверка для слова свиноеб/свиноёб и подобных составных слов
-    if "свино" in text_lower or "свино" in text_normalized:
-        for suffix in ["еб", "ёб"]:
-            if f"свино{suffix}" in text_lower or f"свино{suffix}" in text_normalized:
-                logging.info(f"Обнаружено составное нецензурное слово: свино{suffix}")
-                return True
 
     return False
