@@ -13,3 +13,6 @@ ENV/
 # IDE files
 .idea/
 .vscode/
+
+# Data directory with logs
+/data/
