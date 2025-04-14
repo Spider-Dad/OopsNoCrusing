@@ -54,8 +54,8 @@ async def update_bad_words(message: types.Message):
 @dp.message_handler(content_types=ContentType.TEXT)
 async def echo_message(message: types.Message):
     """
-    Эхо всех текстовых сообщений
-    Если сообщение содержит нецензурную лексику, отправляет GIF
+    Обработчик текстовых сообщений
+    Реагирует только на сообщения с нецензурной лексикой
     """
     text = message.text
 
@@ -73,9 +73,6 @@ async def echo_message(message: types.Message):
         else:
             # Если не удалось получить GIF, отправляем текстовое сообщение
             await message.reply("Пожалуйста, не используйте нецензурную лексику! 🙏")
-    else:
-        # Эхо обычного сообщения
-        await message.answer(text)
 
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
