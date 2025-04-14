@@ -73,3 +73,23 @@
 2025-04-14 16:48:05,767 - __main__ - INFO - Обнаружена нецензурная лексика в сообщении: Смехуечки
 2025-04-14 16:48:25,345 - aiogram.dispatcher.dispatcher - INFO - Stop polling...
 2025-04-14 16:48:25,345 - aiogram - WARNING - Goodbye!
+2025-04-14 16:52:55,682 - aiogram - INFO - Bot: OopsNoCursing [@OopsNoCursingBot]
+2025-04-14 16:52:55,780 - aiogram - WARNING - Updates were skipped successfully.
+2025-04-14 16:52:55,781 - __main__ - INFO - Запуск бота и инициализация списка нецензурных слов...
+2025-04-14 16:52:55,783 - root - INFO - Загружено 6340 слов из кеш-файла
+2025-04-14 16:52:55,784 - root - INFO - Загружено 6340 нецензурных слов
+2025-04-14 16:52:55,785 - __main__ - INFO - Бот запущен и готов к работе
+2025-04-14 16:52:55,785 - aiogram.dispatcher.dispatcher - INFO - Start polling.
+2025-04-14 16:54:43,550 - root - INFO - Загружено 6340 слов из кеш-файла
+2025-04-14 16:54:43,550 - root - INFO - Загружено 6340 нецензурных слов
+2025-04-14 17:02:03,675 - aiogram.dispatcher.dispatcher - INFO - Stop polling...
+2025-04-14 17:02:03,675 - aiogram - WARNING - Goodbye!
+2025-04-14 17:03:09,546 - aiogram - INFO - Bot: OopsNoCursing [@OopsNoCursingBot]
+2025-04-14 17:03:09,646 - aiogram - WARNING - Updates were skipped successfully.
+2025-04-14 17:03:09,646 - __main__ - INFO - Запуск бота и инициализация списка нецензурных слов...
+2025-04-14 17:03:09,653 - root - INFO - Загружено 6340 слов из кеш-файла
+2025-04-14 17:03:09,653 - root - INFO - Загружено 6340 нецензурных слов
+2025-04-14 17:03:09,653 - __main__ - INFO - Бот запущен и готов к работе
+2025-04-14 17:03:09,655 - aiogram.dispatcher.dispatcher - INFO - Start polling.
+2025-04-14 17:07:57,915 - aiogram.dispatcher.dispatcher - INFO - Stop polling...
+2025-04-14 17:07:57,916 - aiogram - WARNING - Goodbye!
