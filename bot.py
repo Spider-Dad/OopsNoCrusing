@@ -11,7 +11,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ContentType, ParseMode
 
 from profanity_filter import contains_profanity, initialize_bad_words
-from gif_service import get_gif_url
+from gif_service import get_gif_url, get_caption
 
 # Загрузка переменных окружения из файла .env
 load_dotenv()
@@ -20,6 +20,7 @@ load_dotenv()
 API_TOKEN = os.getenv('BOT_TOKEN')
 ADMIN_ID = os.getenv('ADMIN_ID')
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+API_SOURCE = os.getenv('API_SOURCE', 'yesno').lower()
 
 # Определение путей в зависимости от окружения
 if ENVIRONMENT.lower() == 'production':
@@ -267,12 +268,15 @@ async def process_message(message: types.Message):
     if contains_profanity(text):
         logger.info(f"Обнаружена нецензурная лексика в сообщении: {text}")
 
-        # Получаем URL GIF из API
+        # Получаем URL GIF из выбранного API
         gif_url = await get_gif_url()
 
         if gif_url:
-            # Выбираем случайное сообщение из списка
-            caption = random.choice(PROFANITY_RESPONSES)
+            # Выбираем подпись в зависимости от API
+            if API_SOURCE == 'cataas':
+                caption = get_caption()
+            else:
+                caption = random.choice(PROFANITY_RESPONSES)
 
             # Отправляем GIF в ответ на сообщение с нецензурной лексикой
             await message.reply_animation(
@@ -281,7 +285,10 @@ async def process_message(message: types.Message):
             )
         else:
             # Если не удалось получить GIF, отправляем текстовое сообщение
-            await message.reply(random.choice(PROFANITY_RESPONSES))
+            if API_SOURCE == 'cataas':
+                await message.reply(get_caption())
+            else:
+                await message.reply(random.choice(PROFANITY_RESPONSES))
     else:
         logger.debug("Нецензурная лексика не обнаружена")
 
