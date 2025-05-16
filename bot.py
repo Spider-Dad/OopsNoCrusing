@@ -90,6 +90,17 @@ HELP_TEXT = """
 # Инициализация списка нецензурных слов
 async def on_startup(dp):
     logger.info("Запуск бота и инициализация списка нецензурных слов...")
+    logger.info(f"Переменные окружения: ENVIRONMENT={ENVIRONMENT}, API_SOURCE={API_SOURCE}, DATA_DIR={DATA_DIR}")
+
+    # Проверяем папку данных
+    if not os.path.exists(DATA_DIR):
+        logger.warning(f"Директория данных {DATA_DIR} не существует! Создаем...")
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            logger.info(f"Директория {DATA_DIR} создана успешно")
+        except Exception as e:
+            logger.error(f"Ошибка при создании директории {DATA_DIR}: {e}")
+
     await initialize_bad_words()
     logger.info("Бот запущен и готов к работе")
 
@@ -160,6 +171,27 @@ async def debug_info(message: types.Message):
                 f"• Примеры слов: {', '.join(sample)}"
 
     await message.reply(debug_text, parse_mode=ParseMode.MARKDOWN)
+
+@dp.message_handler(commands=['check_env'])
+async def check_environment(message: types.Message):
+    """
+    Проверка переменных окружения (только для администратора)
+    """
+    if not is_admin(message.from_user.id):
+        await message.reply("⚠️ У вас нет прав администратора для выполнения этой команды.")
+        return
+
+    # Собираем информацию о переменных окружения
+    env_info = f"""
+📊 *Информация о переменных окружения:*
+
+• ENVIRONMENT: `{ENVIRONMENT}`
+• API_SOURCE: `{API_SOURCE}`
+• DATA_DIR: `{DATA_DIR}`
+• Версия API_SOURCE в gif_service: `{os.getenv('API_SOURCE', 'не установлено')}`
+    """
+
+    await message.reply(env_info, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message_handler(commands=['test'])
 async def test_filter(message: types.Message):
@@ -268,12 +300,16 @@ async def process_message(message: types.Message):
     if contains_profanity(text):
         logger.info(f"Обнаружена нецензурная лексика в сообщении: {text}")
 
+        # Проверяем текущее значение API_SOURCE для логирования
+        current_api_source = os.getenv('API_SOURCE', 'yesno').lower()
+        logger.info(f"Используемый API источник в обработчике сообщений: {current_api_source}")
+
         # Получаем URL GIF из выбранного API
         gif_url = await get_gif_url()
 
         if gif_url:
             # Выбираем подпись в зависимости от API
-            if API_SOURCE == 'cataas':
+            if current_api_source == 'cataas':
                 caption = get_caption()
             else:
                 caption = random.choice(PROFANITY_RESPONSES)
@@ -285,7 +321,7 @@ async def process_message(message: types.Message):
             )
         else:
             # Если не удалось получить GIF, отправляем текстовое сообщение
-            if API_SOURCE == 'cataas':
+            if current_api_source == 'cataas':
                 await message.reply(get_caption())
             else:
                 await message.reply(random.choice(PROFANITY_RESPONSES))

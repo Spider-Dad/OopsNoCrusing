@@ -40,9 +40,16 @@ async def get_gif_url() -> Optional[str]:
     Returns:
         URL GIF-изображения или None в случае ошибки
     """
-    if API_SOURCE == 'cataas':
+    # Повторно считываем переменную окружения для уверенности
+    api_source = os.getenv('API_SOURCE', 'yesno').lower()
+
+    logging.info(f"Используемый API источник: {api_source} (глобальная переменная API_SOURCE={API_SOURCE})")
+
+    if api_source == 'cataas':
+        logging.info("Выбран источник CATAAS (котики)")
         return await get_cat_gif()
-    else:  # По умолчанию используем yesno API
+    else:
+        logging.info("Выбран источник YESNO (по умолчанию)")
         return await get_yesno_gif()
 
 async def get_yesno_gif() -> Optional[str]:
@@ -105,6 +112,9 @@ def get_caption() -> str:
     Returns:
         Строка с подписью для GIF
     """
-    if API_SOURCE == 'cataas':
+    # Согласованно используем ту же переменную, что и в get_gif_url
+    api_source = os.getenv('API_SOURCE', 'yesno').lower()
+
+    if api_source == 'cataas':
         return random.choice(CAT_CAPTIONS)
     return None
