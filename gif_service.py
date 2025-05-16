@@ -73,14 +73,27 @@ async def get_cat_gif() -> Optional[str]:
         URL GIF-изображения или None в случае ошибки
     """
     try:
-        # Используем прямой URL к GIF с котиками
-        # API cataas.com возвращает картинку напрямую, не JSON
+        # Выбираем случайную подпись для котика
         caption = random.choice(CAT_CAPTIONS)
-        # Добавляем текст к GIF с котиком если это нужно
-        # text_params = f"/says/{caption}?fontSize=25&fontColor=white"
 
-        # Возвращаем полный URL для использования в боте
-        return CATAAS_API_URL
+        # С вероятностью 50% добавляем текст к изображению котика
+        if random.choice([True, False]):
+            # Используем API для добавления текста на изображение
+            # Заменяем пробелы на %20 для URL
+            caption_encoded = caption.replace(" ", "%20")
+            text_params = f"/says/{caption_encoded}?fontSize=20&color=white"
+            url = CATAAS_API_URL + text_params
+        else:
+            url = CATAAS_API_URL
+
+        # Добавляем случайный параметр, чтобы избежать кеширования Telegram
+        random_param = f"?r={random.randint(1, 100000)}"
+        if "?" in url:
+            # Если уже есть параметры, добавляем через &
+            return url + f"&r={random.randint(1, 100000)}"
+        else:
+            return url + random_param
+
     except Exception as e:
         logging.error(f"Ошибка при подготовке URL для cataas API: {e}")
         return None
