@@ -443,7 +443,7 @@ async def initialize_bad_words():
     BAD_WORDS = await load_or_update_bad_words()
     logging.info(f"Загружено {len(BAD_WORDS)} нецензурных слов")
 
-def contains_profanity(text: str) -> bool:
+def contains_profanity(text: str) -> tuple[bool, Optional[str]]:
     """
     Проверяет содержит ли текст нецензурную лексику.
 
@@ -451,10 +451,12 @@ def contains_profanity(text: str) -> bool:
         text: Проверяемый текст
 
     Returns:
-        True если содержит нецензурную лексику, иначе False
+        Кортеж (результат, причина), где:
+        - результат: True если содержит нецензурную лексику, иначе False
+        - причина: строка с объяснением причины срабатывания или None, если нецензурная лексика не обнаружена
     """
     if not text:
-        return False
+        return False, None
 
     # Приводим текст к нижнему регистру
     text_lower = text.lower()
@@ -472,30 +474,34 @@ def contains_profanity(text: str) -> bool:
     # 1. Проверяем каждое слово на вхождение в список нецензурных слов напрямую
     for word in all_words:
         if word in BAD_WORDS:
-            logging.info(f"Обнаружено нецензурное слово: {word}")
-            return True
+            reason = f"Обнаружено нецензурное слово: '{word}'"
+            logging.info(reason)
+            return True, reason
 
     # 2. Проверяем каждое слово с нормализацией ё->е
     for bad_word in BAD_WORDS:
         normalized_bad_word = normalize_yo(bad_word)
         for word in all_words:
             if word == normalized_bad_word or normalize_yo(word) == bad_word:
-                logging.info(f"Обнаружено нецензурное слово (после нормализации): {word} -> {bad_word}")
-                return True
+                reason = f"Обнаружено нецензурное слово (после нормализации): '{word}' -> '{bad_word}'"
+                logging.info(reason)
+                return True, reason
 
     # 3. Проверяем на вхождение фраз и словосочетаний (для составных выражений)
     for bad_word in BAD_WORDS:
         if len(bad_word) > 3 and ' ' in bad_word:
             # Для фраз проверяем как оригинал, так и нормализованную версию
             if bad_word in text_lower or bad_word in text_normalized:
-                logging.info(f"Обнаружено нецензурное выражение: {bad_word}")
-                return True
+                reason = f"Обнаружено нецензурное выражение: '{bad_word}'"
+                logging.info(reason)
+                return True, reason
 
             # Проверяем с нормализацией ё->е
             normalized_bad_word = normalize_yo(bad_word)
             if normalized_bad_word in text_lower or normalized_bad_word in text_normalized:
-                logging.info(f"Обнаружено нецензурное выражение (после нормализации): {bad_word}")
-                return True
+                reason = f"Обнаружено нецензурное выражение (после нормализации): '{bad_word}'"
+                logging.info(reason)
+                return True, reason
 
     # 4. Проверяем вхождение корней слов (для обхода склонений)
     for bad_word in BAD_WORDS:
@@ -505,9 +511,12 @@ def contains_profanity(text: str) -> bool:
                 if bad_word in check_text:
                     # Проверяем, что это именно корень слова, а не часть другого слова
                     word_pattern = re.compile(f'\\b\\w*{re.escape(bad_word)}\\w*\\b')
-                    if word_pattern.search(check_text):
-                        logging.info(f"Обнаружен корень нецензурного слова: {bad_word}")
-                        return True
+                    match = word_pattern.search(check_text)
+                    if match:
+                        detected_word = match.group(0)
+                        reason = f"Обнаружен корень нецензурного слова: '{detected_word}' содержит корень '{bad_word}'"
+                        logging.info(reason)
+                        return True, reason
 
             # Проверяем нормализованную версию плохого слова
             normalized_bad_word = normalize_yo(bad_word)
@@ -515,17 +524,20 @@ def contains_profanity(text: str) -> bool:
                 if normalized_bad_word in check_text:
                     # Проверяем, что это именно корень слова, а не часть другого слова
                     word_pattern = re.compile(f'\\b\\w*{re.escape(normalized_bad_word)}\\w*\\b')
-                    if word_pattern.search(check_text):
-                        logging.info(f"Обнаружен корень нецензурного слова (после нормализации): {bad_word}")
-                        return True
+                    match = word_pattern.search(check_text)
+                    if match:
+                        detected_word = match.group(0)
+                        reason = f"Обнаружен корень нецензурного слова (после нормализации): '{detected_word}' содержит корень '{bad_word}'"
+                        logging.info(reason)
+                        return True, reason
 
     # 5. Прямая проверка слов из текста на основе частей слов
     for word in all_words:
         if len(word) >= 4:  # Минимальная длина слова для проверки
             for bad_root in ["хуй", "пизд", "залуп"]:
                 if bad_root in word:
-                    logging.info(f"Обнаружен корень нецензурного слова в слове: {word} (корень: {bad_root})")
-                    return True
+                    reason = f"Обнаружен корень нецензурного слова в слове: '{word}' (корень: '{bad_root}')"
+                    logging.info(reason)
+                    return True, reason
 
-
-    return False
+    return False, None

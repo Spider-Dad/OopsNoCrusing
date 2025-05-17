@@ -207,10 +207,12 @@ async def test_filter(message: types.Message):
         return
 
     test_text = message.get_args()
-    result = contains_profanity(test_text)
+    is_profane, reason = contains_profanity(test_text)
 
-    if result:
-        await message.reply(f"✅ Текст «{test_text}» содержит нецензурную лексику")
+    if is_profane:
+        result = f"✅ Текст «{test_text}» содержит нецензурную лексику\n\n"
+        result += f"*Причина:* {reason}"
+        await message.reply(result, parse_mode=ParseMode.MARKDOWN)
     else:
         await message.reply(f"❌ Текст «{test_text}» не содержит нецензурную лексику")
 
@@ -238,8 +240,11 @@ async def test_yo_variations(message: types.Message):
     # Проверяем каждый вариант на нецензурность
     results = []
     for variant in variants:
-        is_profane = contains_profanity(variant)
-        status = "✅ нецензурное" if is_profane else "❌ обычное"
+        is_profane, reason = contains_profanity(variant)
+        if is_profane:
+            status = f"✅ нецензурное ({reason})"
+        else:
+            status = "❌ обычное"
         results.append(f"• `{variant}` — {status}")
 
     # Формируем ответное сообщение
@@ -297,8 +302,11 @@ async def process_message(message: types.Message):
 
     # Проверяем текст на наличие нецензурной лексики
     logger.debug(f"Проверка сообщения: {text}")
-    if contains_profanity(text):
+    is_profane, reason = contains_profanity(text)
+
+    if is_profane:
         logger.info(f"Обнаружена нецензурная лексика в сообщении: {text}")
+        logger.info(f"Причина: {reason}")
 
         # Проверяем текущее значение API_SOURCE для логирования
         current_api_source = os.getenv('API_SOURCE', 'yesno').lower()
