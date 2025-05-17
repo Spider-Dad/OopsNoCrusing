@@ -88,7 +88,13 @@ async def get_cat_gif() -> Optional[str]:
             # Используем API для добавления текста на изображение
             # Заменяем пробелы на %20 для URL
             caption_encoded = caption.replace(" ", "%20")
-            text_params = f"/says/{caption_encoded}?fontSize=20&color=white"
+
+            # Настраиваем параметры текста:
+            # - fontSize: уменьшаем размер шрифта до 16 (было 20)
+            # - color: цвет текста (оставляем белый)
+            # - position: размещаем текст внизу изображения
+            # - size: ограничиваем размер текста до 15% от изображения
+            text_params = f"/says/{caption_encoded}?fontSize=16&color=white&position=bottom&size=15"
             url = CATAAS_API_URL + text_params
         else:
             url = CATAAS_API_URL
