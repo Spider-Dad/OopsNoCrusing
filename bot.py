@@ -6,6 +6,10 @@
 import logging
 import os
 import random
+import signal
+import sys
+import asyncio
+from datetime import datetime
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ContentType, ParseMode
@@ -42,13 +46,52 @@ PROFANITY_RESPONSES = [
     "\"Сказано — не материться!\" (с) Капитан Очевидность."
 ]
 
+# Список для хранения неотправленных уведомлений об ошибках
+pending_error_notifications = []
+
+class TelegramLogHandler(logging.Handler):
+    """Кастомный обработчик логов для отправки уведомлений в Telegram"""
+
+    def emit(self, record):
+        try:
+            if record.levelno >= logging.ERROR:
+                error_message = self.format(record)
+                # Добавляем уведомление в список для отправки
+                pending_error_notifications.append(error_message)
+                # Пытаемся отправить уведомление
+                asyncio.create_task(send_error_notification(error_message))
+        except Exception:
+            self.handleError(record)
+
+async def send_error_notification(error_message):
+    """Отправка уведомления об ошибке администратору"""
+    if ADMIN_ID:
+        try:
+            notification = f"⚠️ *Внимание! Зафиксирована ошибка приложения @OopsNoCursingBot*\n\n{error_message}"
+            await bot.send_message(ADMIN_ID, notification, parse_mode=ParseMode.MARKDOWN)
+        except Exception as e:
+            logger.error(f"Не удалось отправить уведомление об ошибке: {e}")
+
+async def send_pending_notifications():
+    """Отправка накопившихся уведомлений об ошибках"""
+    if ADMIN_ID and pending_error_notifications:
+        try:
+            notification = "⚠️ *Накопившиеся уведомления об ошибках:*\n\n"
+            notification += "\n\n".join(pending_error_notifications)
+            await bot.send_message(ADMIN_ID, notification, parse_mode=ParseMode.MARKDOWN)
+            # Очищаем список после отправки
+            pending_error_notifications.clear()
+        except Exception as e:
+            logger.error(f"Не удалось отправить накопившиеся уведомления: {e}")
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(os.path.join(DATA_DIR, "bot.log"), encoding='utf-8'),
-        logging.StreamHandler()
+        logging.StreamHandler(),
+        TelegramLogHandler()  # Добавляем кастомный обработчик
     ]
 )
 
@@ -57,6 +100,19 @@ logger = logging.getLogger(__name__)
 # Инициализация бота и диспетчера
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
+
+
+def signal_handler(sig, frame):
+    """Обработчик сигналов завершения"""
+    logger.info("Получен сигнал завершения. Корректно завершаем работу бота...")
+    # Закрываем сессию бота
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(bot.session.close())
+    sys.exit(0)
+
+# Регистрируем обработчики сигналов
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Вспомогательная функция для проверки прав администратора
 def is_admin(user_id):
@@ -103,6 +159,8 @@ async def on_startup(dp):
             logger.error(f"Ошибка при создании директории {DATA_DIR}: {e}")
 
     await initialize_bad_words()
+    # Отправляем накопившиеся уведомления при запуске
+    await send_pending_notifications()
     logger.info("Бот запущен и готов к работе")
 
 @dp.message_handler(commands=['start', 'help'])
@@ -338,4 +396,4 @@ async def process_message(message: types.Message):
         logger.debug("Нецензурная лексика не обнаружена")
 
 if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True, on_startup=on_startup)
+    executor.start_polling(dp, on_startup=on_startup, skip_updates=True)
