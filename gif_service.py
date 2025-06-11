@@ -125,19 +125,12 @@ async def get_cat_gif() -> Optional[str]:
         URL GIF-изображения или None в случае ошибки
     """
     try:
-        caption = random.choice(CAT_CAPTIONS)
-        if random.choice([True, False]):
-            caption_encoded = caption.replace(" ", "%20")
-            text_params = f"/says/{caption_encoded}?fontSize=16&color=white&position=bottom&size=15"
-            url = CATAAS_API_URL + text_params
-        else:
-            url = CATAAS_API_URL
+        # Используем базовый URL без добавления текста
+        url = CATAAS_API_URL
 
+        # Добавляем случайный параметр, чтобы избежать кеширования Telegram
         random_param = f"?r={random.randint(1, 100000)}"
-        if "?" in url:
-            url = url + f"&r={random.randint(1, 100000)}"
-        else:
-            url = url + random_param
+        url = url + random_param
 
         async def _get_gif():
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
