@@ -67,10 +67,14 @@ async def send_error_notification(error_message):
     """Отправка уведомления об ошибке администратору"""
     if ADMIN_ID:
         try:
-            notification = f"⚠️ *Внимание! Зафиксирована ошибка приложения @OopsNoCursingBot*\n\n{error_message}"
-            await bot.send_message(ADMIN_ID, notification, parse_mode=ParseMode.MARKDOWN)
+            # Очищаем сообщение от потенциально проблемных символов
+            clean_message = error_message.replace('*', '').replace('_', '').replace('`', '')
+            notification = f"⚠️ Внимание! Зафиксирована ошибка приложения @OopsNoCursingBot\n\n{clean_message}"
+            await retry_on_timeout(bot.send_message, ADMIN_ID, notification)
         except Exception as e:
             logger.error(f"Не удалось отправить уведомление об ошибке: {e}")
+            # Добавляем в список для повторной попытки
+            pending_error_notifications.append(error_message)
 
 async def send_pending_notifications():
     """Отправка накопившихся уведомлений об ошибках"""
@@ -98,9 +102,23 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Инициализация бота и диспетчера
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=API_TOKEN, timeout=30)
 dp = Dispatcher(bot)
 
+# Настройки для повторных попыток
+RETRY_COUNT = 3
+RETRY_DELAY = 5  # секунды
+
+async def retry_on_timeout(func, *args, **kwargs):
+    """Функция для повторных попыток выполнения при таймауте"""
+    for attempt in range(RETRY_COUNT):
+        try:
+            return await func(*args, **kwargs)
+        except asyncio.TimeoutError:
+            if attempt == RETRY_COUNT - 1:
+                raise
+            logger.warning(f"Таймаут при попытке {attempt + 1}/{RETRY_COUNT}, повтор через {RETRY_DELAY} сек...")
+            await asyncio.sleep(RETRY_DELAY)
 
 def signal_handler(sig, frame):
     """Обработчик сигналов завершения"""
@@ -367,31 +385,26 @@ async def process_message(message: types.Message):
         logger.info(f"Обнаружена нецензурная лексика в сообщении: {text}")
         logger.info(f"Причина: {reason}")
 
-        # Проверяем текущее значение API_SOURCE для логирования
-        current_api_source = os.getenv('API_SOURCE', 'yesno').lower()
-        logger.info(f"Используемый API источник в обработчике сообщений: {current_api_source}")
-
-        # Получаем URL GIF из выбранного API
-        gif_url = await get_gif_url()
+        # Получаем URL GIF и информацию об использованном API
+        gif_url, used_api = await get_gif_url()
 
         if gif_url:
-            # Выбираем подпись в зависимости от API
-            if current_api_source == 'cataas':
-                caption = get_caption()
-            else:
-                caption = random.choice(PROFANITY_RESPONSES)
+            # Выбираем подпись в зависимости от использованного API
+            caption = get_caption(used_api)
 
-            # Отправляем GIF в ответ на сообщение с нецензурной лексикой
-            await message.reply_animation(
-                animation=gif_url,
-                caption=caption
-            )
+            try:
+                # Отправляем GIF в ответ на сообщение с нецензурной лексикой
+                await message.reply_animation(
+                    animation=gif_url,
+                    caption=caption
+                )
+            except Exception as e:
+                logger.error(f"Ошибка при отправке GIF: {e}")
+                # Если не удалось отправить GIF, отправляем текстовое сообщение
+                await message.reply(caption)
         else:
             # Если не удалось получить GIF, отправляем текстовое сообщение
-            if current_api_source == 'cataas':
-                await message.reply(get_caption())
-            else:
-                await message.reply(random.choice(PROFANITY_RESPONSES))
+            await message.reply(random.choice(PROFANITY_RESPONSES))
     else:
         logger.debug("Нецензурная лексика не обнаружена")
 
