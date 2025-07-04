@@ -6,9 +6,14 @@ import os
 import aiohttp
 import logging
 import random
-import asyncio
 from typing import Optional, Tuple
 from dotenv import load_dotenv
+
+from constants import (
+    PROFANITY_RESPONSES, CAT_CAPTIONS, YESNO_API_URL, CATAAS_API_URL,
+    FORCE_NO_PARAM, ERROR_THRESHOLD
+)
+from utils import retry_on_timeout_gif
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -16,48 +21,11 @@ load_dotenv()
 # Выбор API для получения GIF
 API_SOURCE = os.getenv('API_SOURCE', 'yesno').lower()
 
-# URL API для получения случайных GIF
-YESNO_API_URL = "https://yesno.wtf/api"
-CATAAS_API_URL = "https://cataas.com/cat/gif"
-
-# Возможные подписи к котикам
-CAT_CAPTIONS = [
-    "Не матерись - гладь котика!",
-    "Кот не одобряет твои выражения",
-    "Мяу! На кошачьем это значит: 'Не ругайся!'",
-    "Вместо мата - погладь кота",
-    "Котики против мата!",
-    "Мурррр... нет ругательствам!",
-    "Этот котик моет свои ушки, а ты помой свой язык!"
-]
-
-# Принудительно получать "no" GIF для yesno API
-FORCE_NO_PARAM = "?force=no"
-
-# Настройки для повторных попыток
-RETRY_COUNT = 3
-RETRY_DELAY = 2  # секунды
-
 # Счетчик ошибок для каждого API
 api_error_count = {
     'yesno': 0,
     'cataas': 0
 }
-
-# Порог ошибок для переключения API
-ERROR_THRESHOLD = 3
-
-async def retry_on_timeout(func, *args, **kwargs):
-    """Функция для повторных попыток выполнения при таймауте"""
-    for attempt in range(RETRY_COUNT):
-        try:
-            return await func(*args, **kwargs)
-        except (asyncio.TimeoutError, aiohttp.ClientError) as e:
-            if attempt == RETRY_COUNT - 1:
-                logging.error(f"Все попытки получения GIF исчерпаны: {e}")
-                return None
-            logging.warning(f"Ошибка при попытке {attempt + 1}/{RETRY_COUNT}: {e}, повтор через {RETRY_DELAY} сек...")
-            await asyncio.sleep(RETRY_DELAY)
 
 async def get_gif_url() -> Tuple[Optional[str], str]:
     """
@@ -115,7 +83,7 @@ async def get_yesno_gif() -> Optional[str]:
                     logging.error(f"yesno API вернул статус: {response.status}")
                     return None
 
-    return await retry_on_timeout(_get_gif)
+    return await retry_on_timeout_gif(_get_gif)
 
 async def get_cat_gif() -> Optional[str]:
     """
@@ -140,7 +108,7 @@ async def get_cat_gif() -> Optional[str]:
                     logging.error(f"cataas API вернул статус: {response.status}")
                     return None
 
-        return await retry_on_timeout(_get_gif)
+        return await retry_on_timeout_gif(_get_gif)
 
     except Exception as e:
         logging.error(f"Ошибка при подготовке URL для cataas API: {e}")
