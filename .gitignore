@@ -19,3 +19,10 @@ ENV/
 
 # Cache files (both in data directory and local)
 bad_words_cache.json
+
+#
+.specstory/
+
+#
+.cursorindexingignore
+.cursorrules
