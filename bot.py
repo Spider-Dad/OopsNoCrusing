@@ -94,8 +94,8 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Инициализация бота и диспетчера
-bot = Bot(token=API_TOKEN, timeout=30)
+# Инициализация бота и диспетчера с увеличенными таймаутами
+bot = Bot(token=API_TOKEN, timeout=90)  # Увеличиваем таймаут с 30 до 90 секунд
 dp = Dispatcher(bot)
 
 def signal_handler(sig, frame):
@@ -367,5 +367,21 @@ async def process_message(message: types.Message):
     else:
         logger.debug("Нецензурная лексика не обнаружена")
 
+def setup_timeout_logging():
+    """Настраивает фильтр логов для преобразования TimeoutError в WARNING"""
+    aiogram_logger = logging.getLogger('aiogram.dispatcher.dispatcher')
+
+    class TimeoutFilter(logging.Filter):
+        """Фильтр для преобразования TimeoutError при polling в WARNING"""
+        def filter(self, record):
+            message = record.getMessage()
+            if 'TimeoutError' in message and 'getting updates' in message:
+                record.levelno = logging.WARNING
+                record.levelname = 'WARNING'
+            return True
+
+    aiogram_logger.addFilter(TimeoutFilter())
+
 if __name__ == '__main__':
+    setup_timeout_logging()
     executor.start_polling(dp, on_startup=on_startup, skip_updates=True)
